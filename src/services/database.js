@@ -13,5 +13,3 @@ export const db = {
   listProfiles: (queries = []) =>
     databases.listDocuments(DB_IDS.databaseId, DB_IDS.profiles, queries),
 };
-
-

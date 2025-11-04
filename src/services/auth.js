@@ -21,5 +21,3 @@ export const authService = {
     return await account.createVerification(`${window.location.origin}/verify`);
   },
 };
-
-

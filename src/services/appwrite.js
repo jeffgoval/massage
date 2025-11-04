@@ -11,5 +11,3 @@ export const databases = new Databases(client);
 export const storage = new Storage(client);
 export { Query };
 export default client;
-
-

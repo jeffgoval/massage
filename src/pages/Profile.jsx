@@ -2,7 +2,17 @@ import { useParams } from 'react-router-dom';
 import { Card } from '../components/ui/Card.jsx';
 import { Button } from '../components/ui/Button.jsx';
 import { Badge } from '../components/ui/Badge.jsx';
-import { Star, Heart, Share2, MessageCircle, MapPin, Clock, Shield, Camera, Award } from 'lucide-react';
+import {
+  Star,
+  Heart,
+  Share2,
+  MessageCircle,
+  MapPin,
+  Clock,
+  Shield,
+  Camera,
+  Award,
+} from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useState } from 'react';
 
@@ -35,14 +45,35 @@ export default function Profile() {
       satisfaction: '100%',
       averageTime: '2h',
       category: 'VIP',
-      responseTime: '5min'
+      responseTime: '5min',
     },
-    about: 'Profissional dedicada a proporcionar experiências únicas e memoráveis. Com anos de experiência em massagens sensuais e tantric, ofereço um atendimento exclusivo e personalizado para clientes exigentes que buscam momentos de puro prazer e relaxamento.',
+    about:
+      'Profissional dedicada a proporcionar experiências únicas e memoráveis. Com anos de experiência em massagens sensuais e tantric, ofereço um atendimento exclusivo e personalizado para clientes exigentes que buscam momentos de puro prazer e relaxamento.',
     services: [
-      { name: 'Tantric Experience', description: 'Massagem tântrica completa com técnicas orientais', duration: '2h', price: 500 },
-      { name: 'Nuru Massage Premium', description: 'Massagem corpo a corpo com gel especial', duration: '1h30', price: 400 },
-      { name: 'Body to Body Sensual', description: 'Experiência sensorial completa', duration: '1h', price: 300 },
-      { name: 'Lingam Massage', description: 'Técnica especializada focada em prazer masculino', duration: '1h', price: 350 }
+      {
+        name: 'Tantric Experience',
+        description: 'Massagem tântrica completa com técnicas orientais',
+        duration: '2h',
+        price: 500,
+      },
+      {
+        name: 'Nuru Massage Premium',
+        description: 'Massagem corpo a corpo com gel especial',
+        duration: '1h30',
+        price: 400,
+      },
+      {
+        name: 'Body to Body Sensual',
+        description: 'Experiência sensorial completa',
+        duration: '1h',
+        price: 300,
+      },
+      {
+        name: 'Lingam Massage',
+        description: 'Técnica especializada focada em prazer masculino',
+        duration: '1h',
+        price: 350,
+      },
     ],
     amenities: [
       '🏠 Local próprio discreto',
@@ -52,7 +83,7 @@ export default function Profile() {
       '🎵 Ambiente climatizado',
       '🔒 Total privacidade',
       '💳 Aceita cartão',
-      '🌃 Atendimento 24h'
+      '🌃 Atendimento 24h',
     ],
     availability: {
       monday: '10h - 22h',
@@ -61,7 +92,7 @@ export default function Profile() {
       thursday: '10h - 22h',
       friday: '10h - 02h',
       saturday: '14h - 02h',
-      sunday: 'Sob consulta'
+      sunday: 'Sob consulta',
     },
     location: 'Jardins, São Paulo - SP',
     reviews: [
@@ -70,26 +101,29 @@ export default function Profile() {
         author: 'Cliente Verificado',
         date: '2 dias atrás',
         rating: 5,
-        comment: 'Experiência incrível! Isabella é extremamente profissional e atenciosa. O local é impecável e muito discreto. Definitivamente voltarei.',
-        verified: true
+        comment:
+          'Experiência incrível! Isabella é extremamente profissional e atenciosa. O local é impecável e muito discreto. Definitivamente voltarei.',
+        verified: true,
       },
       {
         id: 2,
         author: 'Cliente VIP',
         date: '1 semana atrás',
         rating: 5,
-        comment: 'Simplesmente perfeito. Massagem tântrica foi uma experiência transcendental. Recomendo fortemente!',
-        verified: true
+        comment:
+          'Simplesmente perfeito. Massagem tântrica foi uma experiência transcendental. Recomendo fortemente!',
+        verified: true,
       },
       {
         id: 3,
         author: 'Cliente Verificado',
         date: '2 semanas atrás',
         rating: 5,
-        comment: 'Atendimento de altíssimo nível. Isabella sabe exatamente como proporcionar momentos únicos. Vale cada centavo!',
-        verified: true
-      }
-    ]
+        comment:
+          'Atendimento de altíssimo nível. Isabella sabe exatamente como proporcionar momentos únicos. Vale cada centavo!',
+        verified: true,
+      },
+    ],
   };
 
   return (
@@ -107,7 +141,9 @@ export default function Profile() {
               onClick={() => setIsFavorite(!isFavorite)}
               className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center hover:bg-black/70 transition-colors"
             >
-              <Heart className={`w-5 h-5 ${isFavorite ? 'fill-crimson-500 text-crimson-500' : 'text-white'}`} />
+              <Heart
+                className={`w-5 h-5 ${isFavorite ? 'fill-crimson-500 text-crimson-500' : 'text-white'}`}
+              />
             </motion.button>
             <motion.button
               whileTap={{ scale: 0.95 }}
@@ -119,7 +155,7 @@ export default function Profile() {
         </div>
 
         {/* Avatar e Info Principal */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="w-full px-8">
           <div className="relative -mt-16 md:-mt-20">
             <div className="flex flex-col md:flex-row gap-6 items-start">
               {/* Avatar */}
@@ -130,7 +166,11 @@ export default function Profile() {
               >
                 <div className="w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-gold-500 shadow-gold overflow-hidden bg-gradient-dark">
                   {profile.avatar ? (
-                    <img src={profile.avatar} alt={profile.name} className="w-full h-full object-cover" />
+                    <img
+                      src={profile.avatar}
+                      alt={profile.name}
+                      className="w-full h-full object-cover"
+                    />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-6xl text-gold-500">
                       👤
@@ -150,7 +190,11 @@ export default function Profile() {
                       <h1 className="font-display text-3xl md:text-4xl font-light text-luxury-light tracking-wide">
                         {profile.name}
                       </h1>
-                      {profile.vip && <Badge variant="vip" icon="⭐">VIP Exclusive</Badge>}
+                      {profile.vip && (
+                        <Badge variant="vip" icon="⭐">
+                          VIP Exclusive
+                        </Badge>
+                      )}
                     </div>
 
                     <p className="text-gold-500 italic font-display text-lg md:text-xl mb-4">
@@ -166,14 +210,28 @@ export default function Profile() {
                       </div>
                       <span className="text-luxury-light font-semibold">{profile.rating}</span>
                       <span className="text-gray-400">·</span>
-                      <span className="text-gray-400">{profile.reviewCount} avaliações verificadas</span>
+                      <span className="text-gray-400">
+                        {profile.reviewCount} avaliações verificadas
+                      </span>
                     </div>
 
                     {/* Status Badges */}
                     <div className="flex flex-wrap gap-2">
-                      {profile.featured && <Badge variant="exclusive" icon="🔥">Mais Procurada</Badge>}
-                      {profile.available && <Badge variant="available" icon="•">Disponível Agora</Badge>}
-                      {profile.verified && <Badge variant="verified" icon="✓">Fotos Verificadas</Badge>}
+                      {profile.featured && (
+                        <Badge variant="exclusive" icon="🔥">
+                          Mais Procurada
+                        </Badge>
+                      )}
+                      {profile.available && (
+                        <Badge variant="available" icon="•">
+                          Disponível Agora
+                        </Badge>
+                      )}
+                      {profile.verified && (
+                        <Badge variant="verified" icon="✓">
+                          Fotos Verificadas
+                        </Badge>
+                      )}
                     </div>
                   </div>
 
@@ -185,7 +243,9 @@ export default function Profile() {
                       onClick={() => setIsFavorite(!isFavorite)}
                       className="w-12 h-12 rounded-full bg-black/30 backdrop-blur-sm border border-white/20 flex items-center justify-center hover:bg-black/50 transition-colors"
                     >
-                      <Heart className={`w-5 h-5 ${isFavorite ? 'fill-crimson-500 text-crimson-500' : 'text-white'}`} />
+                      <Heart
+                        className={`w-5 h-5 ${isFavorite ? 'fill-crimson-500 text-crimson-500' : 'text-white'}`}
+                      />
                     </motion.button>
                     <motion.button
                       whileHover={{ scale: 1.05 }}
@@ -203,7 +263,7 @@ export default function Profile() {
       </div>
 
       {/* Conteúdo Principal */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+      <div className="w-full px-8 mt-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Coluna Principal */}
           <div className="lg:col-span-2 space-y-6">
@@ -214,7 +274,9 @@ export default function Profile() {
                   <Camera className="w-6 h-6 text-gold-500" />
                   Galeria Premium
                 </h2>
-                <Badge variant="verified" icon="📸">Verificadas</Badge>
+                <Badge variant="verified" icon="📸">
+                  Verificadas
+                </Badge>
               </div>
 
               <div className="grid grid-cols-3 md:grid-cols-4 gap-2 md:gap-3">
@@ -227,7 +289,11 @@ export default function Profile() {
                     className="aspect-square rounded-lg overflow-hidden bg-luxury-gray/30 cursor-pointer border border-crimson-600/20 hover:border-gold-500/60 transition-colors"
                   >
                     {photo ? (
-                      <img src={photo} alt={`Foto ${index + 1}`} className="w-full h-full object-cover" />
+                      <img
+                        src={photo}
+                        alt={`Foto ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-4xl text-gray-600">
                         📷
@@ -246,7 +312,9 @@ export default function Profile() {
 
             {/* Serviços Oferecidos */}
             <Card hover={false}>
-              <h2 className="font-display text-2xl font-light text-gold-500 mb-6">Experiências Exclusivas</h2>
+              <h2 className="font-display text-2xl font-light text-gold-500 mb-6">
+                Experiências Exclusivas
+              </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {profile.services.map((service, index) => (
                   <div
@@ -366,19 +434,27 @@ export default function Profile() {
               <h3 className="font-display text-xl font-light text-gold-500 mb-4">Estatísticas</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div className="text-center p-4 bg-black/30 rounded-lg">
-                  <div className="text-2xl font-light text-gold-500 mb-1">{profile.stats.satisfaction}</div>
+                  <div className="text-2xl font-light text-gold-500 mb-1">
+                    {profile.stats.satisfaction}
+                  </div>
                   <div className="text-xs text-gray-400 uppercase tracking-wide">Satisfação</div>
                 </div>
                 <div className="text-center p-4 bg-black/30 rounded-lg">
-                  <div className="text-2xl font-light text-gold-500 mb-1">{profile.stats.averageTime}</div>
+                  <div className="text-2xl font-light text-gold-500 mb-1">
+                    {profile.stats.averageTime}
+                  </div>
                   <div className="text-xs text-gray-400 uppercase tracking-wide">Tempo Médio</div>
                 </div>
                 <div className="text-center p-4 bg-black/30 rounded-lg">
-                  <div className="text-2xl font-light text-gold-500 mb-1">{profile.stats.category}</div>
+                  <div className="text-2xl font-light text-gold-500 mb-1">
+                    {profile.stats.category}
+                  </div>
                   <div className="text-xs text-gray-400 uppercase tracking-wide">Categoria</div>
                 </div>
                 <div className="text-center p-4 bg-black/30 rounded-lg">
-                  <div className="text-2xl font-light text-gold-500 mb-1">{profile.stats.responseTime}</div>
+                  <div className="text-2xl font-light text-gold-500 mb-1">
+                    {profile.stats.responseTime}
+                  </div>
                   <div className="text-xs text-gray-400 uppercase tracking-wide">Resposta</div>
                 </div>
               </div>
@@ -419,7 +495,10 @@ export default function Profile() {
               </h3>
               <div className="space-y-2">
                 {Object.entries(profile.availability).map(([day, hours]) => (
-                  <div key={day} className="flex items-center justify-between py-2 border-b border-crimson-600/20 last:border-0">
+                  <div
+                    key={day}
+                    className="flex items-center justify-between py-2 border-b border-crimson-600/20 last:border-0"
+                  >
                     <span className="text-gray-400 capitalize">{day}</span>
                     <span className="text-luxury-light text-sm">{hours}</span>
                   </div>
@@ -462,5 +541,3 @@ export default function Profile() {
     </div>
   );
 }
-
-

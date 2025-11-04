@@ -24,9 +24,30 @@ export default function App() {
             <Route path="/profile/:id" element={<Profile />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            <Route path="/chat" element={<RequireAuth><Chat /></RequireAuth>} />
-            <Route path="/booking/:id" element={<RequireAuth><Booking /></RequireAuth>} />
-            <Route path="/provider" element={<RequireAuth><ProviderDashboard /></RequireAuth>} />
+            <Route
+              path="/chat"
+              element={
+                <RequireAuth>
+                  <Chat />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/booking/:id"
+              element={
+                <RequireAuth>
+                  <Booking />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/provider"
+              element={
+                <RequireAuth>
+                  <ProviderDashboard />
+                </RequireAuth>
+              }
+            />
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </main>
@@ -36,5 +57,3 @@ export default function App() {
     </BrowserRouter>
   );
 }
-
-

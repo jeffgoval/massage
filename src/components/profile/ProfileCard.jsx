@@ -14,15 +14,27 @@ export function ProfileCard({ profile }) {
       </div>
       <div className="pt-16 px-6 pb-6">
         <div className="flex items-start justify-between mb-2">
-          <h3 className="text-2xl font-display font-light text-luxury-light tracking-wide">{profile?.name || 'Nome'}</h3>
-          {profile?.vip && <Badge variant="vip" icon="⭐">VIP</Badge>}
+          <h3 className="text-2xl font-display font-light text-luxury-light tracking-wide">
+            {profile?.name || 'Nome'}
+          </h3>
+          {profile?.vip && (
+            <Badge variant="vip" icon="⭐">
+              VIP
+            </Badge>
+          )}
         </div>
-        <p className="text-gold-500 italic font-display mb-4">"{profile?.tagline || 'Tagline elegante'}"</p>
+        <p className="text-gold-500 italic font-display mb-4">
+          "{profile?.tagline || 'Tagline elegante'}"
+        </p>
         <div className="flex items-center gap-2 mb-4">
           <div className="flex text-gold-500">
-            {[...Array(5)].map((_, i) => <Star key={i} className="w-4 h-4" />)}
+            {[...Array(5)].map((_, i) => (
+              <Star key={i} className="w-4 h-4" />
+            ))}
           </div>
-          <span className="text-sm text-gray-400">{profile?.rating || '5.0'} · {profile?.reviews || 0} avaliações</span>
+          <span className="text-sm text-gray-400">
+            {profile?.rating || '5.0'} · {profile?.reviews || 0} avaliações
+          </span>
         </div>
         <div className="grid grid-cols-4 gap-2 mb-4">
           {photos.slice(0, 3).map((_, i) => (
@@ -33,9 +45,15 @@ export function ProfileCard({ profile }) {
           </div>
         </div>
         <div className="flex flex-wrap gap-2 mb-4">
-          <span className="px-3 py-1 rounded-full bg-crimson-600/20 text-luxury-light text-xs border border-crimson-600/30">{profile?.age || 25} anos</span>
-          <span className="px-3 py-1 rounded-full bg-crimson-600/20 text-luxury-light text-xs border border-crimson-600/30">{profile?.height || '1,68m'} · {profile?.weight || '58kg'}</span>
-          <span className="px-3 py-1 rounded-full bg-crimson-600/20 text-luxury-light text-xs border border-crimson-600/30">{profile?.ethnicity || 'Morena'}</span>
+          <span className="px-3 py-1 rounded-full bg-crimson-600/20 text-luxury-light text-xs border border-crimson-600/30">
+            {profile?.age || 25} anos
+          </span>
+          <span className="px-3 py-1 rounded-full bg-crimson-600/20 text-luxury-light text-xs border border-crimson-600/30">
+            {profile?.height || '1,68m'} · {profile?.weight || '58kg'}
+          </span>
+          <span className="px-3 py-1 rounded-full bg-crimson-600/20 text-luxury-light text-xs border border-crimson-600/30">
+            {profile?.ethnicity || 'Morena'}
+          </span>
         </div>
         <div className="text-center mb-4 p-4 bg-gold-500/5 rounded-lg border border-gold-500/20">
           <div className="text-3xl font-light text-gold-500">R$ {profile?.price || 500}</div>
@@ -46,5 +64,3 @@ export function ProfileCard({ profile }) {
     </Card>
   );
 }
-
-

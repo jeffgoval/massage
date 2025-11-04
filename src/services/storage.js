@@ -19,5 +19,3 @@ export function getOptimizedImage(fileId, width = 400) {
     'webp'
   );
 }
-
-

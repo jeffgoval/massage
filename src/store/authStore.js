@@ -19,5 +19,3 @@ export const useAuthStore = create((set) => ({
     set({ user: null });
   },
 }));
-
-

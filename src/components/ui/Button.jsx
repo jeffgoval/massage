@@ -19,5 +19,3 @@ export function Button({ variant = 'primary', children, className = '', ...props
     </motion.button>
   );
 }
-
-

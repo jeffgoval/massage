@@ -6,9 +6,18 @@ export default function ProviderDashboard() {
     <div className="space-y-6">
       <h1 className="font-display text-3xl">Meu Painel</h1>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card><div className="text-sm text-gray-400">Satisfação</div><div className="text-3xl text-gold-500">100%</div></Card>
-        <Card><div className="text-sm text-gray-400">Agendamentos</div><div className="text-3xl text-gold-500">12</div></Card>
-        <Card><div className="text-sm text-gray-400">Disponível</div><div className="text-3xl text-gold-500">Sim</div></Card>
+        <Card>
+          <div className="text-sm text-gray-400">Satisfação</div>
+          <div className="text-3xl text-gold-500">100%</div>
+        </Card>
+        <Card>
+          <div className="text-sm text-gray-400">Agendamentos</div>
+          <div className="text-3xl text-gold-500">12</div>
+        </Card>
+        <Card>
+          <div className="text-sm text-gray-400">Disponível</div>
+          <div className="text-3xl text-gold-500">Sim</div>
+        </Card>
       </div>
       <Card>
         <h2 className="font-display text-2xl text-gold-500 mb-4">Disponibilidade</h2>
@@ -23,5 +32,3 @@ export default function ProviderDashboard() {
     </div>
   );
 }
-
-

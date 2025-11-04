@@ -7,11 +7,11 @@ const variants = {
 
 export function Badge({ variant = 'exclusive', children, icon }) {
   return (
-    <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold ${variants[variant]}`}>
+    <span
+      className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold ${variants[variant]}`}
+    >
       {icon && <span>{icon}</span>}
       {children}
     </span>
   );
 }
-
-
