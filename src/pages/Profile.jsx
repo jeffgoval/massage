@@ -1,4 +1,4 @@
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Card } from '../components/ui/Card.jsx';
 import { Button } from '../components/ui/Button.jsx';
 import { Badge } from '../components/ui/Badge.jsx';
@@ -12,12 +12,14 @@ import {
   Shield,
   Camera,
   Award,
+  ChevronRight,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useState } from 'react';
 
 export default function Profile() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [isFavorite, setIsFavorite] = useState(false);
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(null);
 
@@ -125,6 +127,66 @@ export default function Profile() {
       },
     ],
   };
+
+  // Perfis similares - dados mock
+  const similarProfiles = [
+    {
+      id: 2,
+      name: 'Larissa Oliveira',
+      age: 23,
+      location: 'Moema, SP',
+      ethnicity: 'Branca',
+      price: 400,
+      rating: 4.9,
+      reviews: 67,
+      avatar: null,
+      vip: true,
+      verified: true,
+      available: false,
+    },
+    {
+      id: 3,
+      name: 'Camila Alves',
+      age: 27,
+      location: 'Pinheiros, SP',
+      ethnicity: 'Negra',
+      price: 600,
+      rating: 5.0,
+      reviews: 102,
+      avatar: null,
+      vip: true,
+      verified: true,
+      available: true,
+    },
+    {
+      id: 5,
+      name: 'Gabriela Ferreira',
+      age: 26,
+      location: 'Itaim Bibi, SP',
+      ethnicity: 'Branca',
+      price: 700,
+      rating: 5.0,
+      reviews: 124,
+      avatar: null,
+      vip: true,
+      verified: true,
+      available: true,
+    },
+    {
+      id: 8,
+      name: 'Bianca Rodrigues',
+      age: 29,
+      location: 'Perdizes, SP',
+      ethnicity: 'Branca',
+      price: 650,
+      rating: 5.0,
+      reviews: 95,
+      avatar: null,
+      vip: true,
+      verified: true,
+      available: true,
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-luxury-black pb-20 md:pb-8">
@@ -524,6 +586,114 @@ export default function Profile() {
               </div>
             </Card>
           </div>
+        </div>
+      </div>
+
+      {/* Seção de Perfis Similares */}
+      <div className="container mx-auto px-4 lg:px-8 py-12 max-w-[1200px]">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="font-display text-2xl md:text-3xl font-light text-luxury-light tracking-wide">
+            Perfis Similares
+          </h2>
+          <button
+            onClick={() => navigate('/search')}
+            className="flex items-center gap-2 text-gold-500 hover:text-gold-400 transition-colors text-sm font-medium"
+          >
+            Ver todos
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Grid de Perfis Similares */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {similarProfiles.map((similarProfile) => (
+            <motion.div
+              key={similarProfile.id}
+              whileHover={{ y: -8 }}
+              onClick={() => {
+                navigate(`/profile/${similarProfile.id}`);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className="cursor-pointer"
+            >
+              <Card className="h-full">
+                {/* Imagem/Avatar */}
+                <div className="relative mb-3">
+                  <div className="aspect-[3/4] rounded-lg overflow-hidden bg-gradient-dark border border-crimson-600/20">
+                    {similarProfile.avatar ? (
+                      <img
+                        src={similarProfile.avatar}
+                        alt={similarProfile.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-5xl text-gold-500/30">
+                        👤
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Status Badge */}
+                  {similarProfile.available && (
+                    <div className="absolute top-2 left-2">
+                      <Badge variant="available" icon="•" className="text-xs px-2 py-1">
+                        Disponível
+                      </Badge>
+                    </div>
+                  )}
+
+                  {/* VIP Badge */}
+                  {similarProfile.vip && (
+                    <div className="absolute top-2 right-2">
+                      <Badge variant="vip" icon="⭐" className="text-xs px-2 py-1">
+                        VIP
+                      </Badge>
+                    </div>
+                  )}
+                </div>
+
+                {/* Info */}
+                <div>
+                  <h3 className="font-display text-lg font-light text-luxury-light mb-1">
+                    {similarProfile.name}
+                  </h3>
+                  <div className="flex items-center gap-1 text-xs text-gray-400 mb-2">
+                    <MapPin className="w-3 h-3" />
+                    <span>{similarProfile.location}</span>
+                  </div>
+
+                  {/* Rating */}
+                  <div className="flex items-center gap-1 mb-2">
+                    <div className="flex text-gold-500">
+                      {[...Array(5)].map((_, i) => (
+                        <Star key={i} className="w-3 h-3 fill-current" />
+                      ))}
+                    </div>
+                    <span className="text-xs text-luxury-light font-semibold">
+                      {similarProfile.rating}
+                    </span>
+                    <span className="text-xs text-gray-400">({similarProfile.reviews})</span>
+                  </div>
+
+                  {/* Tags */}
+                  <div className="flex flex-wrap gap-1 mb-3">
+                    <span className="px-2 py-0.5 rounded-full bg-crimson-600/20 text-luxury-light text-xs border border-crimson-600/30">
+                      {similarProfile.age} anos
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full bg-crimson-600/20 text-luxury-light text-xs border border-crimson-600/30">
+                      {similarProfile.ethnicity}
+                    </span>
+                  </div>
+
+                  {/* Preço */}
+                  <div className="pt-2 border-t border-crimson-600/30">
+                    <div className="text-xl font-light text-gold-500">R$ {similarProfile.price}</div>
+                    <div className="text-xs text-gray-400">por hora</div>
+                  </div>
+                </div>
+              </Card>
+            </motion.div>
+          ))}
         </div>
       </div>
 
