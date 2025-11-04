@@ -3,13 +3,14 @@ import { Input } from '../components/ui/Input.jsx';
 import { Card } from '../components/ui/Card.jsx';
 import { Button } from '../components/ui/Button.jsx';
 import { Badge } from '../components/ui/Badge.jsx';
-import { Star, Heart, MapPin, Filter, X, ChevronDown } from 'lucide-react';
+import { Star, Heart, MapPin, Filter, X, ChevronDown, Grid3x3, List } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 
 export default function Search() {
   const navigate = useNavigate();
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const [viewMode, setViewMode] = useState('grid'); // 'grid' ou 'list'
   const [filters, setFilters] = useState({
     location: '',
     bodyType: '',
@@ -536,130 +537,280 @@ export default function Search() {
           <div className="text-gray-400 text-sm">
             {profiles.length} resultados encontrados
           </div>
-          <div className="flex items-center gap-3">
-            <span className="text-luxury-light text-sm font-medium">Ordenar por:</span>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="px-4 py-2 rounded-lg bg-luxury-black/30 border border-crimson-600/30 text-luxury-light text-sm focus:outline-none focus:border-gold-500 cursor-pointer transition-colors"
-            >
-              <option value="featured">🔥 Mais Procuradas</option>
-              <option value="rating">⭐ Melhor Avaliadas</option>
-              <option value="price-low">💰 Menor Preço</option>
-              <option value="price-high">💎 Maior Preço</option>
-              <option value="newest">🆕 Mais Recentes</option>
-            </select>
+          <div className="flex items-center gap-4">
+            {/* Toggle View Mode */}
+            <div className="flex items-center gap-2 bg-luxury-black/30 border border-crimson-600/30 rounded-lg p-1">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`p-2 rounded transition-colors ${
+                  viewMode === 'grid'
+                    ? 'bg-gold-500 text-black'
+                    : 'text-gray-400 hover:text-luxury-light'
+                }`}
+                title="Visualização em grade"
+              >
+                <Grid3x3 className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`p-2 rounded transition-colors ${
+                  viewMode === 'list'
+                    ? 'bg-gold-500 text-black'
+                    : 'text-gray-400 hover:text-luxury-light'
+                }`}
+                title="Visualização em lista"
+              >
+                <List className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Ordenação */}
+            <div className="flex items-center gap-3">
+              <span className="text-luxury-light text-sm font-medium">Ordenar por:</span>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="px-4 py-2 rounded-lg bg-luxury-black/30 border border-crimson-600/30 text-luxury-light text-sm focus:outline-none focus:border-gold-500 cursor-pointer transition-colors"
+              >
+                <option value="featured">🔥 Mais Procuradas</option>
+                <option value="rating">⭐ Melhor Avaliadas</option>
+                <option value="price-low">💰 Menor Preço</option>
+                <option value="price-high">💎 Maior Preço</option>
+                <option value="newest">🆕 Mais Recentes</option>
+              </select>
+            </div>
           </div>
         </div>
 
-        {/* Grid de Perfis */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {profiles.map((profile) => (
-            <motion.div
-              key={profile.id}
-              whileHover={{ y: -8 }}
-              onClick={() => navigate(`/profile/${profile.id}`)}
-              className="cursor-pointer"
-            >
-              <Card className="h-full">
-                {/* Imagem/Avatar */}
-                <div className="relative mb-4">
-                  <div className="aspect-[3/4] rounded-lg overflow-hidden bg-gradient-dark border border-crimson-600/20">
-                    {profile.avatar ? (
-                      <img
-                        src={profile.avatar}
-                        alt={profile.name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-6xl text-gold-500/30">
-                        👤
+        {/* Grid View */}
+        {viewMode === 'grid' && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {profiles.map((profile) => (
+              <motion.div
+                key={profile.id}
+                whileHover={{ y: -8 }}
+                onClick={() => navigate(`/profile/${profile.id}`)}
+                className="cursor-pointer"
+              >
+                <Card className="h-full">
+                  {/* Imagem/Avatar */}
+                  <div className="relative mb-4">
+                    <div className="aspect-[3/4] rounded-lg overflow-hidden bg-gradient-dark border border-crimson-600/20">
+                      {profile.avatar ? (
+                        <img
+                          src={profile.avatar}
+                          alt={profile.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-6xl text-gold-500/30">
+                          👤
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Status Badge */}
+                    {profile.available && (
+                      <div className="absolute top-3 left-3">
+                        <Badge variant="available" icon="•">
+                          Disponível
+                        </Badge>
                       </div>
                     )}
-                  </div>
 
-                  {/* Status Badge */}
-                  {profile.available && (
-                    <div className="absolute top-3 left-3">
-                      <Badge variant="available" icon="•">
-                        Disponível
-                      </Badge>
+                    {/* Favorito */}
+                    <button className="absolute top-3 right-3 w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center hover:bg-black/70 transition-colors">
+                      <Heart className="w-5 h-5 text-white" />
+                    </button>
+
+                    {/* Contador de fotos */}
+                    <div className="absolute bottom-3 right-3 px-2 py-1 rounded-lg bg-black/70 backdrop-blur-sm text-white text-xs font-medium">
+                      📷 {profile.photos}
                     </div>
-                  )}
-
-                  {/* Favorito */}
-                  <button className="absolute top-3 right-3 w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center hover:bg-black/70 transition-colors">
-                    <Heart className="w-5 h-5 text-white" />
-                  </button>
-
-                  {/* Contador de fotos */}
-                  <div className="absolute bottom-3 right-3 px-2 py-1 rounded-lg bg-black/70 backdrop-blur-sm text-white text-xs font-medium">
-                    📷 {profile.photos}
                   </div>
-                </div>
 
-                {/* Info */}
-                <div>
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex-1">
-                      <h3 className="font-display text-xl font-light text-luxury-light mb-1">
-                        {profile.name}
-                      </h3>
-                      <div className="flex items-center gap-1 text-sm text-gray-400 mb-2">
-                        <MapPin className="w-3 h-3" />
-                        <span>{profile.location}</span>
+                  {/* Info */}
+                  <div>
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1">
+                        <h3 className="font-display text-xl font-light text-luxury-light mb-1">
+                          {profile.name}
+                        </h3>
+                        <div className="flex items-center gap-1 text-sm text-gray-400 mb-2">
+                          <MapPin className="w-3 h-3" />
+                          <span>{profile.location}</span>
+                        </div>
                       </div>
+                      {profile.vip && (
+                        <Badge variant="vip" icon="⭐">
+                          VIP
+                        </Badge>
+                      )}
                     </div>
-                    {profile.vip && (
-                      <Badge variant="vip" icon="⭐">
-                        VIP
-                      </Badge>
-                    )}
-                  </div>
 
-                  {/* Rating */}
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="flex text-gold-500">
-                      {[...Array(5)].map((_, i) => (
-                        <Star key={i} className="w-4 h-4 fill-current" />
-                      ))}
-                    </div>
-                    <span className="text-sm text-luxury-light font-semibold">
-                      {profile.rating}
-                    </span>
-                    <span className="text-sm text-gray-400">({profile.reviews})</span>
-                  </div>
-
-                  {/* Tags */}
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    <span className="px-2 py-1 rounded-full bg-crimson-600/20 text-luxury-light text-xs border border-crimson-600/30">
-                      {profile.age} anos
-                    </span>
-                    <span className="px-2 py-1 rounded-full bg-crimson-600/20 text-luxury-light text-xs border border-crimson-600/30">
-                      {profile.ethnicity}
-                    </span>
-                    {profile.verified && (
-                      <span className="px-2 py-1 rounded-full bg-green-500/20 text-green-400 text-xs border border-green-500">
-                        ✓ Verificada
+                    {/* Rating */}
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="flex text-gold-500">
+                        {[...Array(5)].map((_, i) => (
+                          <Star key={i} className="w-4 h-4 fill-current" />
+                        ))}
+                      </div>
+                      <span className="text-sm text-luxury-light font-semibold">
+                        {profile.rating}
                       </span>
-                    )}
-                  </div>
-
-                  {/* Preço */}
-                  <div className="flex items-center justify-between pt-3 border-t border-crimson-600/30">
-                    <div>
-                      <div className="text-2xl font-light text-gold-500">R$ {profile.price}</div>
-                      <div className="text-xs text-gray-400">por hora</div>
+                      <span className="text-sm text-gray-400">({profile.reviews})</span>
                     </div>
-                    <Button variant="primary" className="px-4 py-2 text-sm">
-                      Ver Perfil
-                    </Button>
+
+                    {/* Tags */}
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      <span className="px-2 py-1 rounded-full bg-crimson-600/20 text-luxury-light text-xs border border-crimson-600/30">
+                        {profile.age} anos
+                      </span>
+                      <span className="px-2 py-1 rounded-full bg-crimson-600/20 text-luxury-light text-xs border border-crimson-600/30">
+                        {profile.ethnicity}
+                      </span>
+                      {profile.verified && (
+                        <span className="px-2 py-1 rounded-full bg-green-500/20 text-green-400 text-xs border border-green-500">
+                          ✓ Verificada
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Preço */}
+                    <div className="flex items-center justify-between pt-3 border-t border-crimson-600/30">
+                      <div>
+                        <div className="text-2xl font-light text-gold-500">R$ {profile.price}</div>
+                        <div className="text-xs text-gray-400">por hora</div>
+                      </div>
+                      <Button variant="primary" className="px-4 py-2 text-sm">
+                        Ver Perfil
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              </Card>
-            </motion.div>
-          ))}
-        </div>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+        )}
+
+        {/* List View */}
+        {viewMode === 'list' && (
+          <div className="space-y-4">
+            {profiles.map((profile) => (
+              <motion.div
+                key={profile.id}
+                whileHover={{ x: 4 }}
+                onClick={() => navigate(`/profile/${profile.id}`)}
+                className="cursor-pointer"
+              >
+                <Card className="overflow-hidden">
+                  <div className="flex flex-col md:flex-row gap-6">
+                    {/* Imagem */}
+                    <div className="relative md:w-48 flex-shrink-0">
+                      <div className="aspect-[3/4] md:aspect-auto md:h-full rounded-lg overflow-hidden bg-gradient-dark border border-crimson-600/20">
+                        {profile.avatar ? (
+                          <img
+                            src={profile.avatar}
+                            alt={profile.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-6xl text-gold-500/30">
+                            👤
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Status Badge */}
+                      {profile.available && (
+                        <div className="absolute top-3 left-3">
+                          <Badge variant="available" icon="•">
+                            Disponível
+                          </Badge>
+                        </div>
+                      )}
+
+                      {/* Contador de fotos */}
+                      <div className="absolute bottom-3 right-3 px-2 py-1 rounded-lg bg-black/70 backdrop-blur-sm text-white text-xs font-medium">
+                        📷 {profile.photos}
+                      </div>
+                    </div>
+
+                    {/* Info */}
+                    <div className="flex-1 flex flex-col">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <h3 className="font-display text-2xl font-light text-luxury-light">
+                              {profile.name}
+                            </h3>
+                            {profile.vip && (
+                              <Badge variant="vip" icon="⭐">
+                                VIP
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1 text-sm text-gray-400 mb-3">
+                            <MapPin className="w-4 h-4" />
+                            <span>{profile.location}</span>
+                          </div>
+
+                          {/* Rating */}
+                          <div className="flex items-center gap-2 mb-4">
+                            <div className="flex text-gold-500">
+                              {[...Array(5)].map((_, i) => (
+                                <Star key={i} className="w-4 h-4 fill-current" />
+                              ))}
+                            </div>
+                            <span className="text-sm text-luxury-light font-semibold">
+                              {profile.rating}
+                            </span>
+                            <span className="text-sm text-gray-400">
+                              ({profile.reviews} avaliações)
+                            </span>
+                          </div>
+
+                          {/* Tags */}
+                          <div className="flex flex-wrap gap-2 mb-4">
+                            <span className="px-3 py-1 rounded-full bg-crimson-600/20 text-luxury-light text-xs border border-crimson-600/30">
+                              {profile.age} anos
+                            </span>
+                            <span className="px-3 py-1 rounded-full bg-crimson-600/20 text-luxury-light text-xs border border-crimson-600/30">
+                              {profile.ethnicity}
+                            </span>
+                            {profile.verified && (
+                              <span className="px-3 py-1 rounded-full bg-green-500/20 text-green-400 text-xs border border-green-500">
+                                ✓ Verificada
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Favorito */}
+                        <button className="w-10 h-10 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center hover:bg-black/50 transition-colors">
+                          <Heart className="w-5 h-5 text-white" />
+                        </button>
+                      </div>
+
+                      {/* Footer com Preço e Ação */}
+                      <div className="flex items-center justify-between pt-4 border-t border-crimson-600/30 mt-auto">
+                        <div>
+                          <div className="text-3xl font-light text-gold-500">
+                            R$ {profile.price}
+                          </div>
+                          <div className="text-sm text-gray-400">por hora</div>
+                        </div>
+                        <Button variant="primary" className="px-6 py-3">
+                          Ver Perfil Completo
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Modal Filtros Mobile */}
