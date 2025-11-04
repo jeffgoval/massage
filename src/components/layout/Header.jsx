@@ -1,7 +1,10 @@
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth.js';
 import { USER_ROLE_NAMES } from '../../utils/constants.js';
 import { LogOut, UserCircle, Briefcase, Shield } from 'lucide-react';
+import client, { databases, Query } from '../../services/appwrite.js';
+import { DB_IDS } from '../../services/database.js';
 
 const roleIcons = {
   cliente: UserCircle,
@@ -12,8 +15,63 @@ const roleIcons = {
 export default function Header() {
   const navigate = useNavigate();
   const { user, role, isAuthenticated, isProfessional, isAdmin, logout } = useAuth();
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const RoleIcon = role ? roleIcons[role] : UserCircle;
+
+  // Load unread messages count for clients (real-time updates)
+  useEffect(() => {
+    const loadUnreadCount = async () => {
+      if (!user || !isAuthenticated || role !== 'cliente') return;
+
+      try {
+        // Get all chats for this client
+        const chatsResponse = await databases.listDocuments(
+          DB_IDS.databaseId,
+          DB_IDS.chats,
+          [Query.equal('client_id', user.$id)]
+        );
+
+        // Count chats with unread messages
+        let count = 0;
+        for (const chat of chatsResponse.documents) {
+          const unreadMessages = await databases.listDocuments(
+            DB_IDS.databaseId,
+            DB_IDS.messages,
+            [
+              Query.equal('chat_id', chat.$id),
+              Query.equal('isRead', false),
+              Query.notEqual('sender_id', user.$id),
+              Query.limit(1),
+            ]
+          );
+          if (unreadMessages.total > 0) {
+            count++;
+          }
+        }
+        setUnreadCount(count);
+      } catch (error) {
+        console.error('Error loading unread count:', error);
+      }
+    };
+
+    loadUnreadCount();
+
+    // Subscribe to message updates to refresh count in real-time
+    if (user && isAuthenticated && role === 'cliente') {
+      const channel = `databases.${DB_IDS.databaseId}.collections.${DB_IDS.messages}.documents`;
+      const unsubscribe = client.subscribe(channel, (response) => {
+        // When a message is created or updated, reload count
+        if (response.events.some(event => event.includes('.create') || event.includes('.update'))) {
+          loadUnreadCount();
+        }
+      });
+
+      return () => {
+        unsubscribe();
+      };
+    }
+  }, [user, isAuthenticated, role]);
 
   const handleLogout = async () => {
     await logout();
@@ -36,8 +94,13 @@ export default function Header() {
 
           {isAuthenticated && (
             <>
-              <Link to="/chat" className="hover:opacity-80 transition-opacity">
+              <Link to="/chat" className="hover:opacity-80 transition-opacity relative">
                 Chat
+                {unreadCount > 0 && (
+                  <span className="absolute -top-2 -right-3 w-5 h-5 bg-crimson-600 text-white text-xs font-bold rounded-full flex items-center justify-center shadow-lg animate-pulse">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
               </Link>
 
               {/* Provider Dashboard Link */}

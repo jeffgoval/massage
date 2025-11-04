@@ -211,8 +211,22 @@ export default function ProviderDashboard() {
         );
         const chats = chatsResponse.documents;
 
-        // Get unread messages count
-        const unreadCount = chats.filter((chat) => chat.unread_count_tenant > 0).length;
+        // Get unread messages count - count messages not sent by tenant and not read
+        let unreadCount = 0;
+        for (const chat of chats) {
+          const unreadMessages = await databases.listDocuments(
+            DB_IDS.databaseId,
+            DB_IDS.messages,
+            [
+              Query.equal('chat_id', chat.$id),
+              Query.equal('isRead', false),
+              Query.notEqual('sender_id', user.$id),
+            ]
+          );
+          if (unreadMessages.total > 0) {
+            unreadCount++;
+          }
+        }
 
         // Calculate monthly revenue (bookings from this month)
         const currentMonth = new Date().getMonth();
@@ -247,14 +261,28 @@ export default function ProviderDashboard() {
           upcomingBookings: upcoming.length,
         });
 
-        // Format recent messages from chats
-        const formattedMessages = chats.slice(0, 5).map((chat) => ({
-          id: chat.$id,
-          client: chat.client_name || 'Cliente',
-          message: chat.last_message || 'Nova conversa',
-          time: formatTimeAgo(chat.$createdAt),
-          unread: chat.unread_count_tenant > 0,
-        }));
+        // Format recent messages from chats - check unread status for each
+        const formattedMessages = await Promise.all(
+          chats.slice(0, 5).map(async (chat) => {
+            const unreadMessages = await databases.listDocuments(
+              DB_IDS.databaseId,
+              DB_IDS.messages,
+              [
+                Query.equal('chat_id', chat.$id),
+                Query.equal('isRead', false),
+                Query.notEqual('sender_id', user.$id),
+                Query.limit(1),
+              ]
+            );
+            return {
+              id: chat.$id,
+              client: chat.client_name || 'Cliente',
+              message: chat.lastMessage || 'Nova conversa',
+              time: formatTimeAgo(chat.lastMessageTime || chat.$createdAt),
+              unread: unreadMessages.total > 0,
+            };
+          })
+        );
         setRecentMessages(formattedMessages);
       } catch (error) {
         console.error('Error loading dashboard data:', error);
@@ -1453,11 +1481,12 @@ export default function ProviderDashboard() {
           <div className="flex gap-2 min-w-max">
             {tabs.map((tab) => {
               const Icon = tab.icon;
+              const showBadge = tab.id === 'messages' && stats.pendingMessages > 0;
               return (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`px-6 py-3 rounded-lg font-body text-sm transition-all flex items-center gap-2 ${
+                  className={`px-6 py-3 rounded-lg font-body text-sm transition-all flex items-center gap-2 relative ${
                     activeTab === tab.id
                       ? 'bg-gradient-to-r from-gold-500 to-gold-400 text-black shadow-gold'
                       : 'bg-black/30 border border-crimson-600/30 text-luxury-light hover:border-gold-500/50'
@@ -1465,6 +1494,11 @@ export default function ProviderDashboard() {
                 >
                   <Icon className="w-4 h-4" />
                   {tab.label}
+                  {showBadge && (
+                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-crimson-600 text-white text-xs font-bold rounded-full flex items-center justify-center shadow-lg animate-pulse">
+                      {stats.pendingMessages > 9 ? '9+' : stats.pendingMessages}
+                    </span>
+                  )}
                 </button>
               );
             })}

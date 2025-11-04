@@ -25,7 +25,8 @@ export const useChatStore = create((set, get) => ({
 
   // Load messages for a specific chat
   async loadMessages(chatId) {
-    set({ loading: true, error: null });
+    // Clear old messages and show loading
+    set({ loading: true, error: null, messages: [] });
     try {
       const response = await chatService.getMessages(chatId);
       // Reverse to show oldest first
@@ -121,7 +122,7 @@ export const useChatStore = create((set, get) => ({
 
   // Select a chat
   selectChat(chat) {
-    set({ selectedChat: chat, messages: [] });
+    set({ selectedChat: chat });
   },
 
   // Cleanup subscriptions
