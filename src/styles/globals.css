@@ -1,0 +1,21 @@
+@import './tailwind.css';
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  background: #000;
+  color: #f4f4f4;
+  font-family: Inter, system-ui, sans-serif;
+}
+
+.container {
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+
