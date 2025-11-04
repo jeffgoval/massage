@@ -4,7 +4,7 @@ import { Button } from '../components/ui/Button.jsx';
 import { Badge } from '../components/ui/Badge.jsx';
 import {
   Star,
-  Heart,
+  Bookmark,
   Share2,
   MessageCircle,
   MapPin,
@@ -13,180 +13,290 @@ import {
   Camera,
   Award,
   ChevronRight,
+  Loader,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { db } from '../services/database.js';
+import { Query } from '../services/appwrite.js';
+import { useAuthStore } from '../store/authStore.js';
 
 export default function Profile() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [isFavorite, setIsFavorite] = useState(false);
+  const { user } = useAuthStore();
+  const [isSaved, setIsSaved] = useState(false);
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [tenant, setTenant] = useState(null);
+  const [packages, setPackages] = useState([]);
+  const [reviews, setReviews] = useState([]);
+  const [similarTenants, setSimilarTenants] = useState([]);
+  const [pricingConfig, setPricingConfig] = useState(null);
 
-  // Dados mock - substituir por dados reais da API
-  const profile = {
-    name: 'Isabella Santos',
-    tagline: 'O prazer é uma arte que domino',
-    age: 25,
-    height: '1,68m',
-    weight: '58kg',
-    ethnicity: 'Morena',
-    eyeColor: 'Castanhos',
-    hairColor: 'Castanho escuro',
-    rating: 5.0,
-    reviewCount: 89,
-    price: 500,
-    avatar: null, // URL da foto
-    coverPhoto: null, // URL da capa
-    photos: Array(9).fill(null), // Array de URLs
-    vip: true,
-    verified: true,
-    available: true,
-    featured: true,
-    stats: {
-      satisfaction: '100%',
-      averageTime: '2h',
-      category: 'VIP',
-      responseTime: '5min',
-    },
-    about:
-      'Profissional dedicada a proporcionar experiências únicas e memoráveis. Com anos de experiência em massagens sensuais e tantric, ofereço um atendimento exclusivo e personalizado para clientes exigentes que buscam momentos de puro prazer e relaxamento.',
-    services: [
-      {
-        name: 'Tantric Experience',
-        description: 'Massagem tântrica completa com técnicas orientais',
-        duration: '2h',
-        price: 500,
-      },
-      {
-        name: 'Nuru Massage Premium',
-        description: 'Massagem corpo a corpo com gel especial',
-        duration: '1h30',
-        price: 400,
-      },
-      {
-        name: 'Body to Body Sensual',
-        description: 'Experiência sensorial completa',
-        duration: '1h',
-        price: 300,
-      },
-      {
-        name: 'Lingam Massage',
-        description: 'Técnica especializada focada em prazer masculino',
-        duration: '1h',
-        price: 350,
-      },
-    ],
-    amenities: [
-      '🏠 Local próprio discreto',
-      '🛁 Hidromassagem premium',
-      '🥂 Drinks de cortesia',
-      '💆 Óleos aromáticos importados',
-      '🎵 Ambiente climatizado',
-      '🔒 Total privacidade',
-      '💳 Aceita cartão',
-      '🌃 Atendimento 24h',
-    ],
-    availability: {
-      monday: '10h - 22h',
-      tuesday: '10h - 22h',
-      wednesday: '10h - 22h',
-      thursday: '10h - 22h',
-      friday: '10h - 02h',
-      saturday: '14h - 02h',
-      sunday: 'Sob consulta',
-    },
-    location: 'Jardins, São Paulo - SP',
-    reviews: [
-      {
-        id: 1,
-        author: 'Cliente Verificado',
-        date: '2 dias atrás',
-        rating: 5,
-        comment:
-          'Experiência incrível! Isabella é extremamente profissional e atenciosa. O local é impecável e muito discreto. Definitivamente voltarei.',
-        verified: true,
-      },
-      {
-        id: 2,
-        author: 'Cliente VIP',
-        date: '1 semana atrás',
-        rating: 5,
-        comment:
-          'Simplesmente perfeito. Massagem tântrica foi uma experiência transcendental. Recomendo fortemente!',
-        verified: true,
-      },
-      {
-        id: 3,
-        author: 'Cliente Verificado',
-        date: '2 semanas atrás',
-        rating: 5,
-        comment:
-          'Atendimento de altíssimo nível. Isabella sabe exatamente como proporcionar momentos únicos. Vale cada centavo!',
-        verified: true,
-      },
-    ],
+  // Load tenant data - OPTIMIZED: All requests in parallel
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+
+        // Load ALL data in PARALLEL for faster loading
+        const [tenantData, packagesData, reviewsData, pricingData, similarData] = await Promise.all([
+          db.getTenant(id).catch(err => {
+            console.error('Tenant not found:', err);
+            return null;
+          }),
+          db.listPackagesByTenant(id).catch(err => {
+            console.error('Error loading packages:', err);
+            return { documents: [] };
+          }),
+          db.listReviewsByTenant(id).catch(err => {
+            console.error('Error loading reviews:', err);
+            return { documents: [] };
+          }),
+          db.getPricingConfig(id).catch(err => {
+            console.error('Error loading pricing config:', err);
+            return null;
+          }),
+          db.listTenants([Query.limit(10)]).catch(err => {
+            console.error('Error loading similar tenants:', err);
+            return { documents: [] };
+          }),
+        ]);
+
+        // Check if tenant exists
+        if (!tenantData) {
+          setTenant(null);
+          setLoading(false);
+          return;
+        }
+
+        // Set all data at once
+        setTenant(tenantData);
+        setPackages(packagesData.documents || []);
+        setReviews(reviewsData.documents || []);
+        setPricingConfig(pricingData);
+        setSimilarTenants(
+          (similarData.documents || [])
+            .filter((t) => t.$id !== id && t.isActive)
+            .slice(0, 3)
+        );
+
+        setLoading(false);
+      } catch (error) {
+        console.error('Error loading profile:', error);
+        setTenant(null);
+        setLoading(false);
+      }
+    };
+
+    if (id) {
+      loadData();
+    }
+  }, [id]);
+
+  // Load favorite status
+  useEffect(() => {
+    const checkFavorite = async () => {
+      if (!user || !id) {
+        setIsSaved(false);
+        return;
+      }
+
+      try {
+        const isFav = await db.isFavorite(user.$id, id);
+        setIsSaved(isFav);
+      } catch (error) {
+        console.error('Error checking favorite:', error);
+      }
+    };
+
+    checkFavorite();
+  }, [user, id]);
+
+  // Toggle save/unsave
+  const handleToggleSave = async () => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+
+    try {
+      if (isSaved) {
+        await db.removeFavorite(user.$id, id);
+        setIsSaved(false);
+      } else {
+        await db.addFavorite(user.$id, id);
+        setIsSaved(true);
+      }
+    } catch (error) {
+      console.error('Error toggling save:', error);
+    }
   };
 
-  // Perfis similares - dados mock
-  const similarProfiles = [
-    {
-      id: 2,
-      name: 'Larissa Oliveira',
-      age: 23,
-      location: 'Moema, SP',
-      ethnicity: 'Branca',
-      price: 400,
-      rating: 4.9,
-      reviews: 67,
-      avatar: null,
-      vip: true,
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-luxury-black flex items-center justify-center">
+        <Loader className="w-8 h-8 text-gold-500 animate-spin" />
+      </div>
+    );
+  }
+
+  // Format price from cents
+  const formatPrice = (cents) => {
+    if (!cents) return 'Sob consulta';
+    return `R$ ${(cents / 100).toFixed(0)}`;
+  };
+
+  // Format duration
+  const formatDuration = (minutes) => {
+    if (!minutes) return '';
+    if (minutes < 60) return `${minutes}min`;
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return mins > 0 ? `${hours}h${mins}` : `${hours}h`;
+  };
+
+  if (!tenant) {
+    return (
+      <div className="min-h-screen bg-luxury-black flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-display text-luxury-light mb-2">
+            Perfil não encontrado
+          </h2>
+          <Button onClick={() => navigate('/search')}>Voltar para busca</Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Calculate dynamic price based on current time and day
+  const calculateCurrentPrice = () => {
+    if (!pricingConfig) {
+      // Fallback to package prices if no pricing config
+      return packages.length > 0 ? Math.min(...packages.map((p) => p.price)) : 0;
+    }
+
+    const now = new Date();
+    const currentDay = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][now.getDay()];
+    const currentHour = now.getHours();
+
+    // Determine current period
+    let currentPeriod = 'morning';
+    if (currentHour >= 12 && currentHour < 18) currentPeriod = 'afternoon';
+    else if (currentHour >= 18 && currentHour < 24) currentPeriod = 'evening';
+    else if (currentHour >= 0 && currentHour < 6) currentPeriod = 'lateNight';
+
+    // Parse JSON configs
+    const parseJSON = (str, defaultValue) => {
+      try {
+        return str ? JSON.parse(str) : defaultValue;
+      } catch (e) {
+        return defaultValue;
+      }
+    };
+
+    const periods = parseJSON(pricingConfig.periods, {});
+    const weekdays = parseJSON(pricingConfig.weekdays, {});
+
+    const basePrice = pricingConfig.basePrice || 300;
+    const periodModifier = periods[currentPeriod]?.modifier || 0;
+    const dayModifier = weekdays[currentDay]?.modifier || 0;
+
+    return basePrice + periodModifier + dayModifier;
+  };
+
+  const lowestPrice = calculateCurrentPrice();
+
+  // Parse JSON fields from tenant
+  const parseJSON = (str, defaultValue) => {
+    try {
+      return str ? JSON.parse(str) : defaultValue;
+    } catch (e) {
+      return defaultValue;
+    }
+  };
+
+  const tenantPhotos = parseJSON(tenant.photos, []);
+  const tenantAmenities = parseJSON(tenant.amenities, [
+    '🏠 Local discreto',
+    '💆 Atendimento profissional',
+    '🔒 Total privacidade',
+  ]);
+  const tenantAvailability = parseJSON(tenant.availability, {
+    monday: { enabled: true, start: '10:00', end: '22:00' },
+    tuesday: { enabled: true, start: '10:00', end: '22:00' },
+    wednesday: { enabled: true, start: '10:00', end: '22:00' },
+    thursday: { enabled: true, start: '10:00', end: '22:00' },
+    friday: { enabled: true, start: '10:00', end: '22:00' },
+    saturday: { enabled: true, start: '10:00', end: '22:00' },
+    sunday: { enabled: false, start: '', end: '' },
+  });
+
+  // Format availability for display
+  const formatAvailability = (schedule) => {
+    if (!schedule) return 'Não disponível';
+    if (typeof schedule === 'string') return schedule; // Legacy format
+    if (!schedule.enabled) return 'Fechado';
+    if (!schedule.start || !schedule.end) return 'Sob consulta';
+    return `${schedule.start} - ${schedule.end}`;
+  };
+
+  // Map tenant data to profile format for easier refactoring
+  const profile = {
+    name: tenant.name || tenant.display_name,
+    tagline: tenant.tagline || 'Profissional de massagem',
+    rating: tenant.reviewCount > 0 ? (tenant.rating || 0) : 0,
+    reviewCount: tenant.reviewCount || 0,
+    price: lowestPrice,
+    avatar: tenant.avatar,
+    coverPhoto: tenant.coverPhoto,
+    photos: tenantPhotos,
+    vip: tenant.isVip,
+    verified: tenant.isVerified,
+    available: tenant.isActive,
+    location: tenant.location || 'Localização não informada',
+    about: tenant.bio || 'Profissional experiente oferecendo serviços de qualidade.',
+    amenities: tenantAmenities,
+    availability: tenantAvailability,
+    age: tenant.age,
+    height: tenant.height,
+    weight: tenant.weight,
+    ethnicity: tenant.ethnicity,
+    eyeColor: tenant.eyeColor,
+    hairColor: tenant.hairColor,
+    responseTime: tenant.responseTime || '5min',
+    services: packages.map((pkg) => ({
+      id: pkg.$id,
+      name: pkg.name,
+      description: pkg.description,
+      duration: formatDuration(pkg.duration),
+      price: formatPrice(pkg.price),
+      priceRaw: pkg.price,
+    })),
+    reviews: reviews.map((rev) => ({
+      id: rev.$id,
+      author: rev.client_name || 'Cliente Anônimo',
+      date: new Date(rev.createdAt).toLocaleDateString('pt-BR'),
+      rating: rev.rating,
+      comment: rev.comment,
       verified: true,
-      available: false,
-    },
-    {
-      id: 3,
-      name: 'Camila Alves',
-      age: 27,
-      location: 'Pinheiros, SP',
-      ethnicity: 'Negra',
-      price: 600,
-      rating: 5.0,
-      reviews: 102,
-      avatar: null,
-      vip: true,
-      verified: true,
-      available: true,
-    },
-    {
-      id: 5,
-      name: 'Gabriela Ferreira',
-      age: 26,
-      location: 'Itaim Bibi, SP',
-      ethnicity: 'Branca',
-      price: 700,
-      rating: 5.0,
-      reviews: 124,
-      avatar: null,
-      vip: true,
-      verified: true,
-      available: true,
-    },
-    {
-      id: 8,
-      name: 'Bianca Rodrigues',
-      age: 29,
-      location: 'Perdizes, SP',
-      ethnicity: 'Branca',
-      price: 650,
-      rating: 5.0,
-      reviews: 95,
-      avatar: null,
-      vip: true,
-      verified: true,
-      available: true,
-    },
-  ];
+    })),
+  };
+
+  // Similar profiles - using real data
+  const similarProfiles = similarTenants.map((t) => ({
+    id: t.$id,
+    name: t.name || t.display_name,
+    location: t.location,
+    price: 0, // Will be calculated from tenant packages if needed
+    rating: t.reviewCount > 0 ? (t.rating || 0) : 0,
+    reviews: t.reviewCount || 0,
+    avatar: t.avatar,
+    vip: t.isVip,
+    verified: t.isVerified,
+    available: t.isActive,
+  }));
 
   return (
     <div className="min-h-screen bg-luxury-black pb-20 md:pb-8">
@@ -198,15 +308,17 @@ export default function Profile() {
 
           {/* Botões de ação no topo (mobile) */}
           <div className="absolute top-4 right-4 flex gap-2 md:hidden">
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setIsFavorite(!isFavorite)}
-              className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center hover:bg-black/70 transition-colors"
-            >
-              <Heart
-                className={`w-5 h-5 ${isFavorite ? 'fill-crimson-500 text-crimson-500' : 'text-white'}`}
-              />
-            </motion.button>
+            {user && (
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={handleToggleSave}
+                className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center hover:bg-black/70 transition-colors"
+              >
+                <Bookmark
+                  className={`w-5 h-5 ${isSaved ? 'fill-gold-500 text-gold-500' : 'text-white'}`}
+                />
+              </motion.button>
+            )}
             <motion.button
               whileTap={{ scale: 0.95 }}
               className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center hover:bg-black/70 transition-colors"
@@ -250,11 +362,16 @@ export default function Profile() {
                   <div>
                     <div className="flex items-center gap-3 flex-wrap mb-2">
                       <h1 className="font-display text-3xl md:text-4xl font-light text-luxury-light tracking-wide">
-                        {profile.name}
+                        {profile.name}{profile.age ? `, ${profile.age}` : ''}
                       </h1>
                       {profile.vip && (
                         <Badge variant="vip" icon="⭐">
                           VIP Exclusive
+                        </Badge>
+                      )}
+                      {profile.available && (
+                        <Badge variant="available" icon="•">
+                          Disponível Agora
                         </Badge>
                       )}
                     </div>
@@ -267,14 +384,25 @@ export default function Profile() {
                     <div className="flex items-center gap-3 mb-4">
                       <div className="flex text-gold-500">
                         {[...Array(5)].map((_, i) => (
-                          <Star key={i} className="w-5 h-5 fill-current" />
+                          <Star
+                            key={i}
+                            className={`w-5 h-5 ${
+                              i < Math.round(profile.rating) ? 'fill-current' : 'fill-none'
+                            }`}
+                          />
                         ))}
                       </div>
-                      <span className="text-luxury-light font-semibold">{profile.rating}</span>
-                      <span className="text-gray-400">·</span>
-                      <span className="text-gray-400">
-                        {profile.reviewCount} avaliações verificadas
-                      </span>
+                      {profile.reviewCount > 0 ? (
+                        <>
+                          <span className="text-luxury-light font-semibold">{profile.rating.toFixed(1)}</span>
+                          <span className="text-gray-400">·</span>
+                          <span className="text-gray-400">
+                            {profile.reviewCount} {profile.reviewCount === 1 ? 'avaliação' : 'avaliações'}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-gray-400">Sem avaliações ainda</span>
+                      )}
                     </div>
 
                     {/* Status Badges */}
@@ -282,11 +410,6 @@ export default function Profile() {
                       {profile.featured && (
                         <Badge variant="exclusive" icon="🔥">
                           Mais Procurada
-                        </Badge>
-                      )}
-                      {profile.available && (
-                        <Badge variant="available" icon="•">
-                          Disponível Agora
                         </Badge>
                       )}
                       {profile.verified && (
@@ -299,16 +422,18 @@ export default function Profile() {
 
                   {/* Botões de ação (desktop) */}
                   <div className="hidden md:flex gap-3">
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => setIsFavorite(!isFavorite)}
-                      className="w-12 h-12 rounded-full bg-black/30 backdrop-blur-sm border border-white/20 flex items-center justify-center hover:bg-black/50 transition-colors"
-                    >
-                      <Heart
-                        className={`w-5 h-5 ${isFavorite ? 'fill-crimson-500 text-crimson-500' : 'text-white'}`}
-                      />
-                    </motion.button>
+                    {user && (
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={handleToggleSave}
+                        className="w-12 h-12 rounded-full bg-black/30 backdrop-blur-sm border border-white/20 flex items-center justify-center hover:bg-black/50 transition-colors"
+                      >
+                        <Bookmark
+                          className={`w-5 h-5 ${isSaved ? 'fill-gold-500 text-gold-500' : 'text-white'}`}
+                        />
+                      </motion.button>
+                    )}
                     <motion.button
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
@@ -443,17 +568,51 @@ export default function Profile() {
             {/* Preço e CTA */}
             <Card hover={false} className="sticky top-4">
               <div className="text-center mb-6 p-6 bg-gold-500/5 rounded-lg border border-gold-500/20">
+                {pricingConfig && (
+                  <div className="mb-2">
+                    <Badge variant="exclusive" className="text-xs">
+                      💰 Preço Dinâmico
+                    </Badge>
+                  </div>
+                )}
                 <div className="text-4xl md:text-5xl font-light text-gold-500 mb-1">
                   R$ {profile.price}
                 </div>
-                <div className="text-sm text-gray-400">por hora</div>
+                <div className="text-sm text-gray-400">
+                  {pricingConfig ? (
+                    <>
+                      agora • {(() => {
+                        const hour = new Date().getHours();
+                        if (hour >= 6 && hour < 12) return '🌅 Manhã';
+                        if (hour >= 12 && hour < 18) return '☀️ Tarde';
+                        if (hour >= 18 && hour < 24) return '🌙 Noite';
+                        return '🌃 Madrugada';
+                      })()}
+                    </>
+                  ) : (
+                    'por hora'
+                  )}
+                </div>
+                {pricingConfig && (
+                  <div className="mt-2 text-xs text-gray-500">
+                    * Preço varia por período e dia
+                  </div>
+                )}
               </div>
 
               <div className="space-y-3">
-                <Button variant="primary" className="w-full">
+                <Button
+                  variant="primary"
+                  className="w-full"
+                  onClick={() => navigate(`/booking/${id}`)}
+                >
                   Agendar Sessão Privada
                 </Button>
-                <Button variant="ghost" className="w-full flex items-center justify-center gap-2">
+                <Button
+                  variant="ghost"
+                  className="w-full flex items-center justify-center gap-2"
+                  onClick={() => navigate(`/chat?tenantId=${id}`)}
+                >
                   <MessageCircle className="w-5 h-5" />
                   Iniciar Chat Discreto
                 </Button>
@@ -464,10 +623,6 @@ export default function Profile() {
             <Card hover={false}>
               <h3 className="font-display text-xl font-light text-gold-500 mb-4">Informações</h3>
               <div className="space-y-3">
-                <div className="flex items-center justify-between py-2 border-b border-crimson-600/20">
-                  <span className="text-gray-400">Idade</span>
-                  <span className="text-luxury-light">{profile.age} anos</span>
-                </div>
                 <div className="flex items-center justify-between py-2 border-b border-crimson-600/20">
                   <span className="text-gray-400">Altura</span>
                   <span className="text-luxury-light">{profile.height}</span>
@@ -487,37 +642,6 @@ export default function Profile() {
                 <div className="flex items-center justify-between py-2">
                   <span className="text-gray-400">Cabelo</span>
                   <span className="text-luxury-light">{profile.hairColor}</span>
-                </div>
-              </div>
-            </Card>
-
-            {/* Estatísticas */}
-            <Card hover={false}>
-              <h3 className="font-display text-xl font-light text-gold-500 mb-4">Estatísticas</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="text-center p-4 bg-black/30 rounded-lg">
-                  <div className="text-2xl font-light text-gold-500 mb-1">
-                    {profile.stats.satisfaction}
-                  </div>
-                  <div className="text-xs text-gray-400 uppercase tracking-wide">Satisfação</div>
-                </div>
-                <div className="text-center p-4 bg-black/30 rounded-lg">
-                  <div className="text-2xl font-light text-gold-500 mb-1">
-                    {profile.stats.averageTime}
-                  </div>
-                  <div className="text-xs text-gray-400 uppercase tracking-wide">Tempo Médio</div>
-                </div>
-                <div className="text-center p-4 bg-black/30 rounded-lg">
-                  <div className="text-2xl font-light text-gold-500 mb-1">
-                    {profile.stats.category}
-                  </div>
-                  <div className="text-xs text-gray-400 uppercase tracking-wide">Categoria</div>
-                </div>
-                <div className="text-center p-4 bg-black/30 rounded-lg">
-                  <div className="text-2xl font-light text-gold-500 mb-1">
-                    {profile.stats.responseTime}
-                  </div>
-                  <div className="text-xs text-gray-400 uppercase tracking-wide">Resposta</div>
                 </div>
               </div>
             </Card>
@@ -561,8 +685,16 @@ export default function Profile() {
                     key={day}
                     className="flex items-center justify-between py-2 border-b border-crimson-600/20 last:border-0"
                   >
-                    <span className="text-gray-400 capitalize">{day}</span>
-                    <span className="text-luxury-light text-sm">{hours}</span>
+                    <span className="text-gray-400 capitalize">
+                      {day === 'monday' && 'Segunda'}
+                      {day === 'tuesday' && 'Terça'}
+                      {day === 'wednesday' && 'Quarta'}
+                      {day === 'thursday' && 'Quinta'}
+                      {day === 'friday' && 'Sexta'}
+                      {day === 'saturday' && 'Sábado'}
+                      {day === 'sunday' && 'Domingo'}
+                    </span>
+                    <span className="text-luxury-light text-sm">{formatAvailability(hours)}</span>
                   </div>
                 ))}
               </div>
@@ -655,7 +787,7 @@ export default function Profile() {
                 {/* Info */}
                 <div>
                   <h3 className="font-display text-lg font-light text-luxury-light mb-1">
-                    {similarProfile.name}
+                    {similarProfile.name}{similarProfile.age ? `, ${similarProfile.age}` : ''}
                   </h3>
                   <div className="flex items-center gap-1 text-xs text-gray-400 mb-2">
                     <MapPin className="w-3 h-3" />
@@ -666,20 +798,28 @@ export default function Profile() {
                   <div className="flex items-center gap-1 mb-2">
                     <div className="flex text-gold-500">
                       {[...Array(5)].map((_, i) => (
-                        <Star key={i} className="w-3 h-3 fill-current" />
+                        <Star
+                          key={i}
+                          className={`w-3 h-3 ${
+                            i < Math.round(similarProfile.rating) ? 'fill-current' : 'fill-none'
+                          }`}
+                        />
                       ))}
                     </div>
-                    <span className="text-xs text-luxury-light font-semibold">
-                      {similarProfile.rating}
-                    </span>
-                    <span className="text-xs text-gray-400">({similarProfile.reviews})</span>
+                    {similarProfile.reviews > 0 ? (
+                      <>
+                        <span className="text-xs text-luxury-light font-semibold">
+                          {similarProfile.rating.toFixed(1)}
+                        </span>
+                        <span className="text-xs text-gray-400">({similarProfile.reviews})</span>
+                      </>
+                    ) : (
+                      <span className="text-xs text-gray-400">Sem avaliações</span>
+                    )}
                   </div>
 
                   {/* Tags */}
                   <div className="flex flex-wrap gap-1 mb-3">
-                    <span className="px-2 py-0.5 rounded-full bg-crimson-600/20 text-luxury-light text-xs border border-crimson-600/30">
-                      {similarProfile.age} anos
-                    </span>
                     <span className="px-2 py-0.5 rounded-full bg-crimson-600/20 text-luxury-light text-xs border border-crimson-600/30">
                       {similarProfile.ethnicity}
                     </span>
@@ -700,10 +840,14 @@ export default function Profile() {
       {/* Bottom Action Bar (Mobile) */}
       <div className="fixed bottom-0 left-0 right-0 lg:hidden bg-luxury-charcoal/95 backdrop-blur-lg border-t border-crimson-600/30 p-4 safe-area-inset-bottom z-50">
         <div className="flex gap-3">
-          <Button variant="primary" className="flex-1">
+          <Button
+            variant="primary"
+            className="flex-1"
+            onClick={() => navigate(`/booking/${id}`)}
+          >
             Agendar Sessão
           </Button>
-          <Button variant="ghost" className="w-14">
+          <Button variant="ghost" className="w-14" onClick={() => navigate('/chat')}>
             <MessageCircle className="w-5 h-5" />
           </Button>
         </div>

@@ -21,22 +21,12 @@ export default function Home() {
       </section>
 
       <section>
-        <h2 className="font-display text-2xl text-gold-500 mb-4">Mais Procuradas</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1, 2, 3].map((i) => (
-            <Card key={i}>
-              <div className="h-40 rounded-lg bg-luxury-gray/30 mb-4" />
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-lg">Isabella</div>
-                  <div className="text-sm text-gray-400">⭐ 5.0 · 89 avaliações</div>
-                </div>
-                <Link to="/profile/1">
-                  <Button className="px-5 py-2">Ver</Button>
-                </Link>
-              </div>
-            </Card>
-          ))}
+        <h2 className="font-display text-2xl text-gold-500 mb-4">Profissionais Disponíveis</h2>
+        <div className="text-center py-8 bg-black/30 rounded-lg border border-crimson-600/20">
+          <p className="text-gray-400 mb-4">Navegue pela lista de profissionais</p>
+          <Link to="/search">
+            <Button>Ver Todos os Perfis</Button>
+          </Link>
         </div>
       </section>
     </div>

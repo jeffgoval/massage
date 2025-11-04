@@ -5,7 +5,12 @@
       "Bash(git push:*)",
       "Bash(netstat:*)",
       "Bash(findstr:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "WebFetch(domain:appwrite.io)",
+      "Bash(npm run dev)",
+      "Bash(node scripts/setup-appwrite.mjs:*)",
+      "Bash(node scripts/verify-pricing.mjs:*)",
+      "Bash(node scripts/check-tenant-data.mjs:*)"
     ],
     "deny": [],
     "ask": []

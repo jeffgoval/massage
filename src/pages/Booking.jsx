@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card } from '../components/ui/Card.jsx';
 import { Button } from '../components/ui/Button.jsx';
 import { Badge } from '../components/ui/Badge.jsx';
+import { useToast } from '../components/ui/Toast.jsx';
 import {
   Calendar,
   Clock,
@@ -14,24 +15,44 @@ import {
   AlertCircle,
   Star,
   MessageSquare,
+  Loader,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { db } from '../services/database.js';
+import { useAuth } from '../hooks/useAuth.js';
 
 export default function Booking() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const toast = useToast();
   const [step, setStep] = useState(1); // 1: formulário, 2: confirmação
+  const [loading, setLoading] = useState(true);
+  const [tenant, setTenant] = useState(null);
+  const [packages, setPackages] = useState([]);
 
-  // Mock profile data
-  const profile = {
-    id: 1,
-    name: 'Isabella Santos',
-    avatar: null,
-    vip: true,
-    rating: 5.0,
-    reviews: 89,
-    location: 'Jardins, São Paulo',
-  };
+  // Load tenant and packages
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        const tenantData = await db.getTenant(id);
+        setTenant(tenantData);
+
+        const packagesData = await db.listPackagesByTenant(id);
+        setPackages(packagesData.documents);
+
+        setLoading(false);
+      } catch (error) {
+        console.error('Error loading booking data:', error);
+        setLoading(false);
+      }
+    };
+
+    if (id) {
+      loadData();
+    }
+  }, [id]);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -45,13 +66,19 @@ export default function Booking() {
 
   const [errors, setErrors] = useState({});
 
-  // Services disponíveis
-  const services = [
-    { id: 'tantric', name: 'Tantric Experience', price: 500, duration: '2h' },
-    { id: 'nuru', name: 'Nuru Massage Premium', price: 400, duration: '1h30' },
-    { id: 'body', name: 'Body to Body Sensual', price: 300, duration: '1h' },
-    { id: 'lingam', name: 'Lingam Massage', price: 350, duration: '1h' },
-  ];
+  // Format price from cents
+  const formatPrice = (cents) => {
+    if (!cents) return 'R$ 0';
+    return `R$ ${(cents / 100).toFixed(0)}`;
+  };
+
+  // Map packages to services format
+  const services = packages.map((pkg) => ({
+    id: pkg.$id,
+    name: pkg.name,
+    price: pkg.price,
+    duration: `${pkg.duration}min`,
+  }));
 
   // Durations
   const durations = [
@@ -86,21 +113,79 @@ export default function Booking() {
     }
   };
 
-  const handleConfirm = () => {
-    // Implementar lógica de confirmação
-    console.log('Booking confirmado:', formData);
-    // Redirecionar para chat ou página de sucesso
-    navigate('/chat');
+  const handleConfirm = async () => {
+    try {
+      if (!user) {
+        toast.warning('Você precisa estar logado para fazer uma reserva');
+        navigate('/login');
+        return;
+      }
+
+      // Create booking in Appwrite
+      await db.createBooking({
+        tenant_id: id,
+        client_id: user.$id,
+        package_id: formData.service,
+        date: formData.date,
+        time: formData.time,
+        duration: formData.duration,
+        location: formData.location,
+        specialRequests: formData.specialRequests,
+        status: 'pending',
+        totalPrice: totalPrice,
+        createdAt: new Date().toISOString(),
+      });
+
+      toast.success('Reserva criada com sucesso!');
+      // Redirect to chat
+      navigate(`/chat?tenantId=${id}`);
+    } catch (error) {
+      console.error('Error creating booking:', error);
+      toast.error('Erro ao criar reserva. Tente novamente.');
+    }
   };
 
   // Calcular preço
   const selectedService = services.find((s) => s.id === formData.service);
   const basePrice = selectedService?.price || 0;
-  const locationFee = formData.location === 'hotel' ? 100 : 0;
+  const locationFee = formData.location === 'hotel' ? 10000 : 0; // R$ 100.00 in cents
   const totalPrice = basePrice + locationFee;
 
   // Get minimum date (today)
   const today = new Date().toISOString().split('T')[0];
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-luxury-black flex items-center justify-center">
+        <Loader className="w-8 h-8 text-gold-500 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!tenant) {
+    return (
+      <div className="min-h-screen bg-luxury-black flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-display text-luxury-light mb-2">
+            Profissional não encontrado
+          </h2>
+          <Button onClick={() => navigate('/search')}>Voltar para busca</Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Map tenant to profile
+  const profile = {
+    id: tenant.$id,
+    name: tenant.name || tenant.display_name,
+    avatar: tenant.avatar,
+    vip: tenant.isVip,
+    rating: tenant.rating || 5.0,
+    reviews: tenant.reviewCount || 0,
+    location: tenant.location || 'Localização não informada',
+  };
 
   return (
     <div className="min-h-screen bg-luxury-black pb-20 md:pb-8">
@@ -241,7 +326,7 @@ export default function Booking() {
                                 {service.name}
                               </h4>
                               <span className="text-gold-500 font-semibold">
-                                R$ {service.price}
+                                {formatPrice(service.price)}
                               </span>
                             </div>
                             <p className="text-xs text-gray-400">{service.duration}</p>
@@ -319,7 +404,7 @@ export default function Booking() {
                             </h4>
                           </div>
                           <p className="text-xs text-gray-400">
-                            Taxa adicional de R$ 100
+                            Taxa adicional de {formatPrice(10000)}
                           </p>
                         </div>
                       </div>
@@ -372,7 +457,7 @@ export default function Booking() {
                           {selectedService.name}
                         </p>
                         <p className="text-sm text-gold-500 mt-1">
-                          R$ {selectedService.price}
+                          {formatPrice(selectedService.price)}
                         </p>
                       </div>
                     )}
@@ -417,7 +502,7 @@ export default function Booking() {
                           : 'Hotel/Motel'}
                       </p>
                       {formData.location === 'hotel' && (
-                        <p className="text-sm text-gold-500 mt-1">+ R$ 100 (taxa)</p>
+                        <p className="text-sm text-gold-500 mt-1">+ {formatPrice(10000)} (taxa)</p>
                       )}
                     </div>
 
@@ -425,12 +510,12 @@ export default function Booking() {
                     <div className="pt-2">
                       <div className="flex justify-between items-center mb-2">
                         <span className="text-gray-400">Subtotal</span>
-                        <span className="text-luxury-light">R$ {basePrice}</span>
+                        <span className="text-luxury-light">{formatPrice(basePrice)}</span>
                       </div>
                       {locationFee > 0 && (
                         <div className="flex justify-between items-center mb-2">
                           <span className="text-gray-400">Taxa de deslocamento</span>
-                          <span className="text-luxury-light">R$ {locationFee}</span>
+                          <span className="text-luxury-light">{formatPrice(locationFee)}</span>
                         </div>
                       )}
                       <div className="pt-3 mt-3 border-t border-crimson-600/30">
@@ -439,7 +524,7 @@ export default function Booking() {
                             Total
                           </span>
                           <span className="font-display text-2xl text-gold-500">
-                            R$ {totalPrice}
+                            {formatPrice(totalPrice)}
                           </span>
                         </div>
                       </div>
@@ -532,7 +617,7 @@ export default function Booking() {
                       </h4>
                     </div>
                     <p className="text-3xl font-light text-gold-500 ml-8">
-                      R$ {totalPrice}
+                      {formatPrice(totalPrice)}
                     </p>
                   </div>
                 </div>

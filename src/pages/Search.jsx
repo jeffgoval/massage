@@ -1,14 +1,17 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Input } from '../components/ui/Input.jsx';
 import { Card } from '../components/ui/Card.jsx';
 import { Button } from '../components/ui/Button.jsx';
 import { Badge } from '../components/ui/Badge.jsx';
-import { Star, Heart, MapPin, Filter, X, ChevronDown, Grid3x3, List } from 'lucide-react';
+import { Star, Bookmark, MapPin, Filter, X, ChevronDown, Grid3x3, List, Loader } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { db } from '../services/database.js';
+import { useAuthStore } from '../store/authStore.js';
 
 export default function Search() {
   const navigate = useNavigate();
+  const { user } = useAuthStore();
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [viewMode, setViewMode] = useState('grid'); // 'grid' ou 'list'
   const [filters, setFilters] = useState({
@@ -22,154 +25,186 @@ export default function Search() {
     category: '',
   });
   const [sortBy, setSortBy] = useState('featured');
+  const [loading, setLoading] = useState(true);
+  const [tenants, setTenants] = useState([]);
+  const [tenantsPackages, setTenantsPackages] = useState({});
+  const [tenantsPricing, setTenantsPricing] = useState({});
+  const [favorites, setFavorites] = useState(new Set());
 
-  // Dados mock - substituir por dados da API
-  const profiles = [
-    {
-      id: 1,
-      name: 'Isabella Santos',
-      age: 25,
-      location: 'Jardins, SP',
-      ethnicity: 'Morena',
-      price: 500,
-      rating: 5.0,
-      reviews: 89,
-      avatar: null,
-      vip: true,
-      verified: true,
-      available: true,
-      featured: true,
-      photos: 9,
-    },
-    {
-      id: 2,
-      name: 'Larissa Oliveira',
-      age: 23,
-      location: 'Moema, SP',
-      ethnicity: 'Branca',
-      price: 400,
-      rating: 4.9,
-      reviews: 67,
-      avatar: null,
-      vip: true,
-      verified: true,
-      available: false,
-      featured: true,
-      photos: 12,
-    },
-    {
-      id: 3,
-      name: 'Camila Alves',
-      age: 27,
-      location: 'Pinheiros, SP',
-      ethnicity: 'Negra',
-      price: 600,
-      rating: 5.0,
-      reviews: 102,
-      avatar: null,
-      vip: true,
-      verified: true,
-      available: true,
-      featured: false,
-      photos: 8,
-    },
-    {
-      id: 4,
-      name: 'Amanda Costa',
-      age: 24,
-      location: 'Vila Madalena, SP',
-      ethnicity: 'Morena',
-      price: 350,
-      rating: 4.8,
-      reviews: 54,
-      avatar: null,
-      vip: false,
-      verified: true,
-      available: true,
-      featured: false,
-      photos: 6,
-    },
-    {
-      id: 5,
-      name: 'Gabriela Ferreira',
-      age: 26,
-      location: 'Itaim Bibi, SP',
-      ethnicity: 'Branca',
-      price: 700,
-      rating: 5.0,
-      reviews: 124,
-      avatar: null,
-      vip: true,
-      verified: true,
-      available: true,
-      featured: true,
-      photos: 15,
-    },
-    {
-      id: 6,
-      name: 'Juliana Martins',
-      age: 28,
-      location: 'Brooklin, SP',
-      ethnicity: 'Oriental',
-      price: 550,
-      rating: 4.9,
-      reviews: 78,
-      avatar: null,
-      vip: true,
-      verified: true,
-      available: false,
-      featured: false,
-      photos: 10,
-    },
-    {
-      id: 7,
-      name: 'Rafaela Lima',
-      age: 22,
-      location: 'Centro, SP',
-      ethnicity: 'Morena',
-      price: 300,
-      rating: 4.7,
-      reviews: 45,
-      avatar: null,
-      vip: false,
-      verified: true,
-      available: true,
-      featured: false,
-      photos: 7,
-    },
-    {
-      id: 8,
-      name: 'Bianca Rodrigues',
-      age: 29,
-      location: 'Perdizes, SP',
-      ethnicity: 'Branca',
-      price: 650,
-      rating: 5.0,
-      reviews: 95,
-      avatar: null,
-      vip: true,
-      verified: true,
-      available: true,
-      featured: true,
-      photos: 11,
-    },
-    {
-      id: 9,
-      name: 'Fernanda Silva',
-      age: 25,
-      location: 'Vila Olímpia, SP',
-      ethnicity: 'Negra',
-      price: 500,
-      rating: 4.9,
-      reviews: 71,
-      avatar: null,
-      vip: true,
-      verified: true,
-      available: false,
-      featured: false,
-      photos: 9,
-    },
-  ];
+  // Load tenants from Appwrite
+  useEffect(() => {
+    const loadTenants = async () => {
+      try {
+        setLoading(true);
+        const response = await db.listTenants([]);
+        setTenants(response.documents.filter(t => t.isActive));
+
+        // Load packages and pricing for each tenant
+        const packagesPromises = response.documents.map(async (tenant) => {
+          try {
+            const pkgs = await db.listPackagesByTenant(tenant.$id);
+            return { tenantId: tenant.$id, packages: pkgs.documents };
+          } catch (error) {
+            return { tenantId: tenant.$id, packages: [] };
+          }
+        });
+
+        const pricingPromises = response.documents.map(async (tenant) => {
+          try {
+            const pricing = await db.getPricingConfig(tenant.$id);
+            return { tenantId: tenant.$id, pricing };
+          } catch (error) {
+            return { tenantId: tenant.$id, pricing: null };
+          }
+        });
+
+        const packagesResults = await Promise.all(packagesPromises);
+        const pricingResults = await Promise.all(pricingPromises);
+
+        const packagesMap = {};
+        packagesResults.forEach(({ tenantId, packages }) => {
+          packagesMap[tenantId] = packages;
+        });
+        setTenantsPackages(packagesMap);
+
+        const pricingMap = {};
+        pricingResults.forEach(({ tenantId, pricing }) => {
+          pricingMap[tenantId] = pricing;
+        });
+        setTenantsPricing(pricingMap);
+
+        setLoading(false);
+      } catch (error) {
+        console.error('Error loading tenants:', error);
+        setLoading(false);
+      }
+    };
+
+    loadTenants();
+  }, []);
+
+  // Load user favorites
+  useEffect(() => {
+    const loadFavorites = async () => {
+      if (!user) {
+        setFavorites(new Set());
+        return;
+      }
+
+      try {
+        const userFavorites = await db.listFavorites(user.$id);
+        const favoriteIds = new Set(userFavorites.map(fav => fav.tenant_id));
+        setFavorites(favoriteIds);
+      } catch (error) {
+        console.error('Error loading favorites:', error);
+      }
+    };
+
+    loadFavorites();
+  }, [user]);
+
+  // Format price - handles both cents (from packages) and reais (from dynamic pricing)
+  const formatPrice = (price, isDynamic = false) => {
+    if (!price) return 'Sob consulta';
+    // If dynamic pricing, price is already in reais
+    if (isDynamic) return `R$ ${price}`;
+    // Otherwise, price is in cents from packages
+    return `R$ ${(price / 100).toFixed(0)}`;
+  };
+
+  // Calculate dynamic price based on current time and day
+  const calculateDynamicPrice = (tenantId) => {
+    const pricingConfig = tenantsPricing[tenantId];
+    const packages = tenantsPackages[tenantId] || [];
+
+    if (!pricingConfig) {
+      // Fallback to package prices if no pricing config
+      return packages.length > 0 ? Math.min(...packages.map((p) => p.price)) : 0;
+    }
+
+    const now = new Date();
+    const currentDay = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][now.getDay()];
+    const currentHour = now.getHours();
+
+    // Determine current period
+    let currentPeriod = 'morning';
+    if (currentHour >= 12 && currentHour < 18) currentPeriod = 'afternoon';
+    else if (currentHour >= 18 && currentHour < 24) currentPeriod = 'evening';
+    else if (currentHour >= 0 && currentHour < 6) currentPeriod = 'lateNight';
+
+    // Parse JSON configs
+    const parseJSON = (str, defaultValue) => {
+      try {
+        return str ? JSON.parse(str) : defaultValue;
+      } catch (e) {
+        return defaultValue;
+      }
+    };
+
+    const periods = parseJSON(pricingConfig.periods, {});
+    const weekdays = parseJSON(pricingConfig.weekdays, {});
+
+    const basePrice = pricingConfig.basePrice || 300;
+    const periodModifier = periods[currentPeriod]?.modifier || 0;
+    const dayModifier = weekdays[currentDay]?.modifier || 0;
+
+    return basePrice + periodModifier + dayModifier;
+  };
+
+  // Toggle favorite (save/unsave)
+  const handleToggleFavorite = async (e, tenantId) => {
+    e.stopPropagation(); // Prevent card click
+    e.preventDefault();
+
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+
+    try {
+      const isSaved = favorites.has(tenantId);
+
+      if (isSaved) {
+        await db.removeFavorite(user.$id, tenantId);
+        setFavorites(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(tenantId);
+          return newSet;
+        });
+      } else {
+        await db.addFavorite(user.$id, tenantId);
+        setFavorites(prev => new Set(prev).add(tenantId));
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+    }
+  };
+
+  // Map tenants to profiles format
+  const profiles = tenants.map((tenant) => {
+    const dynamicPrice = calculateDynamicPrice(tenant.$id);
+
+    return {
+      id: tenant.$id,
+      name: tenant.name || tenant.display_name,
+      location: tenant.location || 'Localização não informada',
+      price: dynamicPrice,
+      rating: tenant.reviewCount > 0 ? (tenant.rating || 0) : 0,
+      reviews: tenant.reviewCount || 0,
+      avatar: tenant.avatar,
+      vip: tenant.isVip,
+      verified: tenant.isVerified,
+      available: tenant.isActive,
+      featured: tenant.isVip, // VIP são featured
+      photos: tenant.photos?.length || 0,
+      age: tenant.age,
+      ethnicity: tenant.ethnicity,
+      height: tenant.height,
+      weight: tenant.weight,
+      hasDynamicPricing: !!tenantsPricing[tenant.$id],
+    };
+  });
+
 
   const handleFilterChange = (field, value) => {
     setFilters((prev) => ({ ...prev, [field]: value }));
@@ -345,6 +380,14 @@ export default function Search() {
       </div>
     </div>
   );
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-luxury-black flex items-center justify-center">
+        <Loader className="w-8 h-8 text-gold-500 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-luxury-black pb-20 md:pb-8">
@@ -609,19 +652,19 @@ export default function Search() {
                       )}
                     </div>
 
-                    {/* Status Badge */}
-                    {profile.available && (
-                      <div className="absolute top-3 left-3">
-                        <Badge variant="available" icon="•">
-                          Disponível
-                        </Badge>
-                      </div>
+                    {/* Salvar */}
+                    {user && (
+                      <button
+                        onClick={(e) => handleToggleFavorite(e, profile.id)}
+                        className="absolute top-3 right-3 w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center hover:bg-black/70 transition-colors"
+                      >
+                        <Bookmark
+                          className={`w-5 h-5 ${
+                            favorites.has(profile.id) ? 'fill-gold-500 text-gold-500' : 'text-white'
+                          }`}
+                        />
+                      </button>
                     )}
-
-                    {/* Favorito */}
-                    <button className="absolute top-3 right-3 w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center hover:bg-black/70 transition-colors">
-                      <Heart className="w-5 h-5 text-white" />
-                    </button>
 
                     {/* Contador de fotos */}
                     <div className="absolute bottom-3 right-3 px-2 py-1 rounded-lg bg-black/70 backdrop-blur-sm text-white text-xs font-medium">
@@ -631,41 +674,53 @@ export default function Search() {
 
                   {/* Info */}
                   <div>
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1">
-                        <h3 className="font-display text-xl font-light text-luxury-light mb-1">
-                          {profile.name}
-                        </h3>
-                        <div className="flex items-center gap-1 text-sm text-gray-400 mb-2">
-                          <MapPin className="w-3 h-3" />
-                          <span>{profile.location}</span>
-                        </div>
-                      </div>
+                    <div className="flex items-center gap-2 flex-wrap mb-2">
+                      <h3 className="font-display text-xl font-light text-luxury-light">
+                        {profile.name}{profile.age ? `, ${profile.age}` : ''}
+                      </h3>
                       {profile.vip && (
                         <Badge variant="vip" icon="⭐">
                           VIP
                         </Badge>
                       )}
+                      {profile.available && (
+                        <Badge variant="available" icon="•">
+                          Disponível
+                        </Badge>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-1 text-sm text-gray-400 mb-2">
+                      <MapPin className="w-3 h-3" />
+                      <span>{profile.location}</span>
                     </div>
 
                     {/* Rating */}
                     <div className="flex items-center gap-2 mb-3">
                       <div className="flex text-gold-500">
                         {[...Array(5)].map((_, i) => (
-                          <Star key={i} className="w-4 h-4 fill-current" />
+                          <Star
+                            key={i}
+                            className={`w-4 h-4 ${
+                              i < Math.round(profile.rating) ? 'fill-current' : 'fill-none'
+                            }`}
+                          />
                         ))}
                       </div>
-                      <span className="text-sm text-luxury-light font-semibold">
-                        {profile.rating}
-                      </span>
-                      <span className="text-sm text-gray-400">({profile.reviews})</span>
+                      {profile.reviews > 0 ? (
+                        <>
+                          <span className="text-sm text-luxury-light font-semibold">
+                            {profile.rating.toFixed(1)}
+                          </span>
+                          <span className="text-sm text-gray-400">({profile.reviews})</span>
+                        </>
+                      ) : (
+                        <span className="text-sm text-gray-400">Sem avaliações</span>
+                      )}
                     </div>
 
                     {/* Tags */}
                     <div className="flex flex-wrap gap-2 mb-3">
-                      <span className="px-2 py-1 rounded-full bg-crimson-600/20 text-luxury-light text-xs border border-crimson-600/30">
-                        {profile.age} anos
-                      </span>
                       <span className="px-2 py-1 rounded-full bg-crimson-600/20 text-luxury-light text-xs border border-crimson-600/30">
                         {profile.ethnicity}
                       </span>
@@ -679,8 +734,12 @@ export default function Search() {
                     {/* Preço */}
                     <div className="flex items-center justify-between pt-3 border-t border-crimson-600/30">
                       <div>
-                        <div className="text-2xl font-light text-gold-500">R$ {profile.price}</div>
-                        <div className="text-xs text-gray-400">por hora</div>
+                        <div className="text-2xl font-light text-gold-500">
+                          {formatPrice(profile.price, profile.hasDynamicPricing)}
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          {profile.hasDynamicPricing ? 'agora' : 'por hora'}
+                        </div>
                       </div>
                       <Button variant="primary" className="px-4 py-2 text-sm">
                         Ver Perfil
@@ -721,15 +780,6 @@ export default function Search() {
                         )}
                       </div>
 
-                      {/* Status Badge */}
-                      {profile.available && (
-                        <div className="absolute top-3 left-3">
-                          <Badge variant="available" icon="•">
-                            Disponível
-                          </Badge>
-                        </div>
-                      )}
-
                       {/* Contador de fotos */}
                       <div className="absolute bottom-3 right-3 px-2 py-1 rounded-lg bg-black/70 backdrop-blur-sm text-white text-xs font-medium">
                         📷 {profile.photos}
@@ -740,13 +790,18 @@ export default function Search() {
                     <div className="flex-1 flex flex-col">
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
+                          <div className="flex items-center gap-3 mb-2 flex-wrap">
                             <h3 className="font-display text-2xl font-light text-luxury-light">
-                              {profile.name}
+                              {profile.name}{profile.age ? `, ${profile.age}` : ''}
                             </h3>
                             {profile.vip && (
                               <Badge variant="vip" icon="⭐">
                                 VIP
+                              </Badge>
+                            )}
+                            {profile.available && (
+                              <Badge variant="available" icon="•">
+                                Disponível
                               </Badge>
                             )}
                           </div>
@@ -759,22 +814,30 @@ export default function Search() {
                           <div className="flex items-center gap-2 mb-4">
                             <div className="flex text-gold-500">
                               {[...Array(5)].map((_, i) => (
-                                <Star key={i} className="w-4 h-4 fill-current" />
+                                <Star
+                                  key={i}
+                                  className={`w-4 h-4 ${
+                                    i < Math.round(profile.rating) ? 'fill-current' : 'fill-none'
+                                  }`}
+                                />
                               ))}
                             </div>
-                            <span className="text-sm text-luxury-light font-semibold">
-                              {profile.rating}
-                            </span>
-                            <span className="text-sm text-gray-400">
-                              ({profile.reviews} avaliações)
-                            </span>
+                            {profile.reviews > 0 ? (
+                              <>
+                                <span className="text-sm text-luxury-light font-semibold">
+                                  {profile.rating.toFixed(1)}
+                                </span>
+                                <span className="text-sm text-gray-400">
+                                  ({profile.reviews} {profile.reviews === 1 ? 'avaliação' : 'avaliações'})
+                                </span>
+                              </>
+                            ) : (
+                              <span className="text-sm text-gray-400">Sem avaliações</span>
+                            )}
                           </div>
 
                           {/* Tags */}
                           <div className="flex flex-wrap gap-2 mb-4">
-                            <span className="px-3 py-1 rounded-full bg-crimson-600/20 text-luxury-light text-xs border border-crimson-600/30">
-                              {profile.age} anos
-                            </span>
                             <span className="px-3 py-1 rounded-full bg-crimson-600/20 text-luxury-light text-xs border border-crimson-600/30">
                               {profile.ethnicity}
                             </span>
@@ -786,19 +849,30 @@ export default function Search() {
                           </div>
                         </div>
 
-                        {/* Favorito */}
-                        <button className="w-10 h-10 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center hover:bg-black/50 transition-colors">
-                          <Heart className="w-5 h-5 text-white" />
-                        </button>
+                        {/* Salvar */}
+                        {user && (
+                          <button
+                            onClick={(e) => handleToggleFavorite(e, profile.id)}
+                            className="w-10 h-10 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center hover:bg-black/50 transition-colors"
+                          >
+                            <Bookmark
+                              className={`w-5 h-5 ${
+                                favorites.has(profile.id) ? 'fill-gold-500 text-gold-500' : 'text-white'
+                              }`}
+                            />
+                          </button>
+                        )}
                       </div>
 
                       {/* Footer com Preço e Ação */}
                       <div className="flex items-center justify-between pt-4 border-t border-crimson-600/30 mt-auto">
                         <div>
                           <div className="text-3xl font-light text-gold-500">
-                            R$ {profile.price}
+                            {formatPrice(profile.price, profile.hasDynamicPricing)}
                           </div>
-                          <div className="text-sm text-gray-400">por hora</div>
+                          <div className="text-sm text-gray-400">
+                            {profile.hasDynamicPricing ? 'agora' : 'por hora'}
+                          </div>
                         </div>
                         <Button variant="primary" className="px-6 py-3">
                           Ver Perfil Completo
